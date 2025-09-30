@@ -75,8 +75,8 @@ public class TPCommand extends SimpleCommand {
 
             CompletableFuture<Void> future = world.getChunkAtAsync(chunkX, chunkZ).thenAccept(chunk -> {
                 int y = world.getHighestBlockYAt(pointX, pointZ, HeightMap.MOTION_BLOCKING);
-                Location location = new Location(world, pointX, y, pointZ);
-                playerLocations.put(targetPlayer, location);
+                Location location = new Location(world, pointX, y + 1.5, pointZ);
+                playerLocations.put(targetPlayer, location.toCenterLocation());
             });
             chunkFutures.add(future);
         }
