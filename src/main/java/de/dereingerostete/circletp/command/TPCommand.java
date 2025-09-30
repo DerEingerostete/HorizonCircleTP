@@ -34,7 +34,6 @@ public class TPCommand extends SimpleCommand {
         setPermission("event.circle-tp");
         setDescription("Teleports all players in a circle around a certain point");
         setUsage("/circle-tp <circleX> <circleZ>");
-        permissionMessage(Component.text("You dont have the permissions to do this!", NamedTextColor.RED));
     }
 
     @Override
@@ -58,7 +57,7 @@ public class TPCommand extends SimpleCommand {
             return;
         }
 
-        List<Player> allPlayers = List.copyOf(Bukkit.getAllOnlinePlayers());
+        List<Player> allPlayers = List.copyOf(Bukkit.getOnlinePlayers());
         int playerCount = allPlayers.size();
         player.sendMessage(Component.text("§7Preparing teleportation of §c" + playerCount + "§7 players"));
 

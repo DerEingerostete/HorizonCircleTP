@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 // Fully made with ChatGPT, I needed to finish this in a couple of hours
-public final class CircleUtils {
+public class CircleUtils {
 
     private CircleUtils() {}
 

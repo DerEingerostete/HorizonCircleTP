@@ -4,7 +4,7 @@ package de.dereingerostete.circletp.util;
  * Utility methods to compute a circle radius given number of points and desired spacing.
  * Fully made with ChatGPT, I needed to finish this in a couple of hours
  */
-public final class RadiusUtils {
+public class RadiusUtils {
 
     private RadiusUtils() {}
 
