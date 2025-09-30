@@ -1,11 +1,8 @@
 package de.dereingerostete.circletp.command;
 
-import de.dereingerostete.circletp.CircleTPPlugin;
 import de.dereingerostete.circletp.command.util.SimpleCommand;
 import de.dereingerostete.circletp.util.CircleUtils;
 import de.dereingerostete.circletp.util.RadiusUtils;
-import io.papermc.paper.threadedregions.scheduler.EntityScheduler;
-import io.papermc.paper.threadedregions.scheduler.RegionScheduler;
 import lombok.extern.slf4j.Slf4j;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -17,14 +14,14 @@ import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent;
-import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 
 import java.awt.geom.Point2D;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 public class TPCommand extends SimpleCommand {
@@ -65,10 +62,7 @@ public class TPCommand extends SimpleCommand {
         List<Point2D.Double> points = CircleUtils.pointsOnCircle(centerX, centerZ, radius, playerCount);
         World world = player.getWorld();
 
-        Plugin plugin = CircleTPPlugin.getInstance();
-        RegionScheduler regionScheduler = Bukkit.getRegionScheduler();
-
-        CountDownLatch latch = new CountDownLatch(points.size());
+        List<CompletableFuture<?>> chunkFutures = new ArrayList<>();
         Map<Player, Location> playerLocations = new HashMap<>();
         for (int i = 0; i < points.size(); i++) {
             Point2D.Double point = points.get(i);
@@ -78,19 +72,19 @@ public class TPCommand extends SimpleCommand {
             int chunkX = pointX >> 4;
             int chunkZ = pointZ >> 4;
             Player targetPlayer = allPlayers.get(i);
-            regionScheduler.run(plugin, world, chunkX, chunkZ, task -> {
-                if (task.isCancelled()) return;
 
+            CompletableFuture<Void> future = world.getChunkAtAsync(chunkX, chunkZ).thenAccept(chunk -> {
                 int y = world.getHighestBlockYAt(pointX, pointZ, HeightMap.MOTION_BLOCKING);
                 Location location = new Location(world, pointX, y, pointZ);
                 playerLocations.put(targetPlayer, location);
-                latch.countDown();
             });
+            chunkFutures.add(future);
         }
 
         try {
-            latch.await();
-        } catch (InterruptedException exception) {
+            CompletableFuture<?>[] futures = chunkFutures.toArray(CompletableFuture[]::new);
+            CompletableFuture.allOf(futures).join();
+        } catch (RuntimeException exception) {
             log.warn("Failed to wait for all locations to be loaded", exception);
             sendMessage(player, "Failed to load all locations for teleport. Aborting", NamedTextColor.RED);
             return;
@@ -101,11 +95,8 @@ public class TPCommand extends SimpleCommand {
             Player targetPlayer = entry.getKey();
             Location location = entry.getValue();
 
-            EntityScheduler entityScheduler = targetPlayer.getScheduler();
-            entityScheduler.run(plugin, ignored -> {
-                sendMessage(targetPlayer, "Teleporting...", NamedTextColor.GRAY);
-                targetPlayer.teleportAsync(location, PlayerTeleportEvent.TeleportCause.PLUGIN);
-            }, null);
+           sendMessage(targetPlayer, "Teleporting...", NamedTextColor.GRAY);
+           targetPlayer.teleportAsync(location, PlayerTeleportEvent.TeleportCause.PLUGIN);
         }
     }
 
