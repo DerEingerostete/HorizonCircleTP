@@ -91,7 +91,7 @@ public class TPCommand extends SimpleCommand {
         try {
             latch.await();
         } catch (InterruptedException exception) {
-            log.warn("Failed to for all locations to be loaded", exception);
+            log.warn("Failed to wait for all locations to be loaded", exception);
             sendMessage(player, "Failed to load all locations for teleport. Aborting", NamedTextColor.RED);
             return;
         }
