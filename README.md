@@ -8,7 +8,7 @@ This plugin was made for [Folia](https://papermc.io/software/folia) and more spe
 The plugin was tested with:
 
 * Java 21
-* Folia / ShreddedPaper
+* ShreddedPaper
 * Minecraft Version 1.20.6
 
 ### Build the plugin
