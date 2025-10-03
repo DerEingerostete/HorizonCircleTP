@@ -3,4 +3,6 @@ author: DerEingerostete
 
 version: '${project.version}'
 api-version: 1.20
-main: de.dereingerostete.cirlcetp.CircleTPPlugin
+folia-supported: true
+
+main: de.dereingerostete.circletp.CircleTPPlugin

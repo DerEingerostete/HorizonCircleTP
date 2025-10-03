@@ -2,25 +2,36 @@ package de.dereingerostete.circletp;
 
 import de.dereingerostete.circletp.command.TPCommand;
 import de.dereingerostete.circletp.command.util.SimpleCommand;
+import de.dereingerostete.circletp.helper.RespawnHelper;
+import de.dereingerostete.circletp.listener.RespawnListener;
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
-@Slf4j
 public class CircleTPPlugin extends JavaPlugin {
-    public static Logger LOGGER;
+    public static Logger log;
     private static @Getter Plugin instance;
+    private static RespawnHelper respawnHelper;
 
     @Override
     public void onEnable() {
-        LOGGER = getSLF4JLogger();
+        log = getSLF4JLogger();
         instance = this;
 
-        registerCommand(new TPCommand());
-        LOGGER.info("Plugin enabled");
+        respawnHelper = new RespawnHelper();
+        registerCommand(new TPCommand(respawnHelper));
+        registerListeners();
+
+        log.info("Plugin enabled");
+    }
+
+    private void registerListeners() {
+        PluginManager manager = Bukkit.getPluginManager();
+        manager.registerEvents(new RespawnListener(respawnHelper), this);
     }
 
     private void registerCommand(@NotNull SimpleCommand command) {
@@ -29,7 +40,7 @@ public class CircleTPPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        LOGGER.info("Plugin disabled");
+        log.info("Plugin disabled");
     }
 
 }

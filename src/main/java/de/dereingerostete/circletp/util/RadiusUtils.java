@@ -46,4 +46,22 @@ public class RadiusUtils {
         return spacing / denom;
     }
 
+    /**
+     * Helper: compute a sensible count so that adjacent points are at least 'minArcLength'
+     * apart along the circle (arc length). Use this to decide how many points to request
+     * from the caller's desired minimum spacing.
+     *
+     * @param radius circle radius (absolute value used)
+     * @param minArcLength minimum distance along arc between adjacent points (must be > 0)
+     * @return recommended integer count (>= 1)
+     */
+    public static int countForMinSpacing(double radius, double minArcLength) {
+        if (minArcLength <= 0) throw new IllegalArgumentException("minArcLength must be > 0");
+        double r = Math.abs(radius);
+        double circumference = 2 * Math.PI * r;
+        // floor gives maximum number of points that maintain at least minArcLength between them
+        int count = (int) Math.floor(circumference / minArcLength);
+        return Math.max(1, count);
+    }
+
 }

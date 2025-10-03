@@ -1,9 +1,9 @@
 package de.dereingerostete.circletp.command;
 
 import de.dereingerostete.circletp.command.util.SimpleCommand;
+import de.dereingerostete.circletp.helper.RespawnHelper;
 import de.dereingerostete.circletp.util.CircleUtils;
 import de.dereingerostete.circletp.util.RadiusUtils;
-import lombok.extern.slf4j.Slf4j;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -23,13 +23,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-@Slf4j
-public class TPCommand extends SimpleCommand {
+import static de.dereingerostete.circletp.CircleTPPlugin.log;
 
-    public TPCommand() {
+public class TPCommand extends SimpleCommand {
+    private static final double MIN_RADIUS = 300; // Minimum radius we always require
+    private final @NotNull RespawnHelper respawnHelper;
+
+    public TPCommand(@NotNull RespawnHelper respawnHelper) {
         super("circle-tp", true);
+        this.respawnHelper = respawnHelper;
+
         setPermission("event.circle-tp");
-        setDescription("Teleports all players in a circle around a certain point");
+        setDescription("Teleports all players in a circle around a certain point. It also sets the players respawn point");
         setUsage("/circle-tp <circleX> <circleZ>");
     }
 
@@ -59,6 +64,8 @@ public class TPCommand extends SimpleCommand {
         player.sendMessage(Component.text("§7Preparing teleportation of §c" + playerCount + "§7 players"));
 
         double radius = Math.ceil(RadiusUtils.radiusForArcSpacing(playerCount, 3));
+        radius = Math.max(radius, MIN_RADIUS); // Make sure to enforce min radius
+
         List<Point2D.Double> points = CircleUtils.pointsOnCircle(centerX, centerZ, radius, playerCount);
         World world = player.getWorld();
 
@@ -75,13 +82,14 @@ public class TPCommand extends SimpleCommand {
 
             CompletableFuture<Void> future = world.getChunkAtAsync(chunkX, chunkZ).thenAccept(chunk -> {
                 int y = world.getHighestBlockYAt(pointX, pointZ, HeightMap.MOTION_BLOCKING);
-                Location location = new Location(world, pointX, y + 1.5, pointZ);
-                playerLocations.put(targetPlayer, location.toCenterLocation());
+                Location location = new Location(world, pointX, y + 1.5, pointZ).toCenterLocation();
+                playerLocations.put(targetPlayer, location);
             });
             chunkFutures.add(future);
         }
 
         try {
+            sendMessage(player, "Please wait a moment before all locations are loaded",  NamedTextColor.GRAY);
             CompletableFuture<?>[] futures = chunkFutures.toArray(CompletableFuture[]::new);
             CompletableFuture.allOf(futures).join();
         } catch (RuntimeException exception) {
@@ -98,6 +106,10 @@ public class TPCommand extends SimpleCommand {
            sendMessage(targetPlayer, "Teleporting...", NamedTextColor.GRAY);
            targetPlayer.teleportAsync(location, PlayerTeleportEvent.TeleportCause.PLUGIN);
         }
+
+        respawnHelper.generateRespawnLocations(world, centerX, centerZ, radius);
+        respawnHelper.setEnabled(true);
+        sendMessage(player, "Respawning around the center is now active", NamedTextColor.DARK_GREEN);
     }
 
     private void sendMessage(@NotNull CommandSender sender, @NotNull String message, @NotNull TextColor color) {
