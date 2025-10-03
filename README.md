@@ -32,7 +32,7 @@ Where:
 - **circleZ** is the Z coordinate of the center
 
 After executing the command all players (excluding players with the permission ``event.circle-tp.ignored``) will be teleported in a circle around the center coordinates.
-The radius is calculated based on the amount of players with a minimum defined by ``TPCommand#MIN_RADIUS``.
+The radius is calculated based on the amount of players with a minimum defined by [``TPCommand#MIN_RADIUS``](https://github.com/DerEingerostete/HorizonCircleTP/blob/master/src/main/java/de/dereingerostete/circletp/command/TPCommand.java#L32).
 
 Additionally, the plugin will generate random locations around the center (in a circle) that players will respawn on. This does not happen if the player already set their own spawnpoint.
 
