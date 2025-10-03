@@ -3,6 +3,7 @@ package de.dereingerostete.circletp.command;
 import de.dereingerostete.circletp.command.util.SimpleCommand;
 import de.dereingerostete.circletp.helper.RespawnHelper;
 import de.dereingerostete.circletp.util.CircleUtils;
+import de.dereingerostete.circletp.util.LocationUtils;
 import de.dereingerostete.circletp.util.RadiusUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -66,26 +67,53 @@ public class TPCommand extends SimpleCommand {
         double radius = Math.ceil(RadiusUtils.radiusForArcSpacing(playerCount, 3));
         radius = Math.max(radius, MIN_RADIUS); // Make sure to enforce min radius
 
-        List<Point2D.Double> points = CircleUtils.pointsOnCircle(centerX, centerZ, radius, playerCount);
-        World world = player.getWorld();
-
-        List<CompletableFuture<?>> chunkFutures = new ArrayList<>();
-        Map<Player, Location> playerLocations = new HashMap<>();
-        for (int i = 0; i < points.size(); i++) {
-            Point2D.Double point = points.get(i);
+        // Generate points and sort them into chunks (so we don't load chunks multiple times)
+        List<Point2D.Double> rawPoints = CircleUtils.pointsOnCircle(centerX, centerZ, radius, playerCount);
+        Map<Point2D.Double, List<Point2D.Double>> chunkSortedCoordinates = new HashMap<>();
+        for (Point2D.Double point : rawPoints) {
             int pointX = (int) Math.ceil(point.getX());
             int pointZ = (int) Math.ceil(point.getY());
 
             int chunkX = pointX >> 4;
             int chunkZ = pointZ >> 4;
-            Player targetPlayer = allPlayers.get(i);
 
-            CompletableFuture<Void> future = world.getChunkAtAsync(chunkX, chunkZ).thenAccept(chunk -> {
-                int y = world.getHighestBlockYAt(pointX, pointZ, HeightMap.MOTION_BLOCKING);
-                Location location = new Location(world, pointX, y + 1.5, pointZ).toCenterLocation();
-                playerLocations.put(targetPlayer, location);
-            });
-            chunkFutures.add(future);
+            Point2D.Double chunkPoint = new Point2D.Double(chunkX, chunkZ);
+            List<Point2D.Double> coordinates = chunkSortedCoordinates.get(chunkPoint);
+            if (coordinates == null) {
+                coordinates = new ArrayList<>();
+                coordinates.add(point);
+                chunkSortedCoordinates.put(chunkPoint, coordinates);
+            } else {
+                coordinates.add(point);
+            }
+        }
+
+        // Load positions and sort them to players
+        int i = 0;
+        World world = player.getWorld();
+        List<CompletableFuture<?>> chunkFutures = new ArrayList<>();
+        Map<Player, Location> playerLocations = new HashMap<>();
+        for (Map.Entry<Point2D.Double, List<Point2D.Double>> entry : chunkSortedCoordinates.entrySet()) {
+            List<Point2D.Double> coordinates = entry.getValue();
+            Point2D.Double chunkPoint = entry.getKey();
+            int chunkX = (int) chunkPoint.getX();
+            int chunkZ = (int) chunkPoint.getY();
+
+            for (Point2D.Double point : coordinates) {
+                int pointX = (int) point.getX();
+                int pointZ = (int) point.getY();
+
+                Player targetPlayer = allPlayers.get(i);
+                i++;
+
+                CompletableFuture<Void> future = world.getChunkAtAsync(chunkX, chunkZ).thenAccept(chunk -> {
+                    int y = world.getHighestBlockYAt(pointX, pointZ, HeightMap.MOTION_BLOCKING);
+                    Location location = new Location(world, pointX, y + 1.5, pointZ).toCenterLocation();
+                    LocationUtils.setYawToCenter(location, centerX, centerZ);
+                    playerLocations.put(targetPlayer, location);
+                });
+                chunkFutures.add(future);
+            }
         }
 
         try {

@@ -1,6 +1,7 @@
 package de.dereingerostete.circletp.helper;
 
 import de.dereingerostete.circletp.util.CircleUtils;
+import de.dereingerostete.circletp.util.LocationUtils;
 import de.dereingerostete.circletp.util.RadiusUtils;
 import lombok.Getter;
 import lombok.Setter;
@@ -11,7 +12,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.awt.geom.Point2D;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
@@ -61,6 +64,7 @@ public class RespawnHelper {
                         int fullZ = chunkZ * 16 + z;
                         double y = world.getHighestBlockYAt(fullX, fullZ, HeightMap.MOTION_BLOCKING) + 2.5;
                         Location location = new Location(world, fullX + 0.5, y, fullZ + 0.5);
+                        LocationUtils.setYawToCenter(location, centerX, centerZ);
                         respawnLocations.add(location);
                     }
                 }
