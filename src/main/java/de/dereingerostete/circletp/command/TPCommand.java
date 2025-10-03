@@ -48,7 +48,7 @@ public class TPCommand extends SimpleCommand {
 
     @Override
     public void execute(@NotNull Player player, @NotNull String[] args, int arguments) {
-        if (args.length == 0) {
+        if (args.length != 2) {
             sendMessage(player, "Wrong usage. Use /circle-tp <circleX> <circleZ>", NamedTextColor.RED);
             return;
         }
