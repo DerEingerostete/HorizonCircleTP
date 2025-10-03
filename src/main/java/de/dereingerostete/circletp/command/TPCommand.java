@@ -1,10 +1,12 @@
 package de.dereingerostete.circletp.command;
 
+import de.dereingerostete.circletp.CircleTPPlugin;
 import de.dereingerostete.circletp.command.util.SimpleCommand;
 import de.dereingerostete.circletp.helper.RespawnHelper;
 import de.dereingerostete.circletp.util.CircleUtils;
 import de.dereingerostete.circletp.util.LocationUtils;
 import de.dereingerostete.circletp.util.RadiusUtils;
+import io.papermc.paper.threadedregions.scheduler.EntityScheduler;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
@@ -60,7 +62,17 @@ public class TPCommand extends SimpleCommand {
             return;
         }
 
-        List<Player> allPlayers = List.copyOf(Bukkit.getOnlinePlayers());
+        List<Player> allPlayers = List.copyOf(Bukkit.getOnlinePlayers())
+                .stream()
+                .filter(p -> !p.hasPermission("event.circle-tp.ignored"))
+                .map(Player.class::cast) // Cast itself so we have a clean list without "extends"
+                .toList();
+
+        if (allPlayers.isEmpty()) {
+            sendMessage(player, "There are no players to teleport!", NamedTextColor.RED);
+            return;
+        }
+
         int playerCount = allPlayers.size();
         player.sendMessage(Component.text("§7Preparing teleportation of §c" + playerCount + "§7 players"));
 
@@ -133,6 +145,11 @@ public class TPCommand extends SimpleCommand {
 
            sendMessage(targetPlayer, "Teleporting...", NamedTextColor.GRAY);
            targetPlayer.teleportAsync(location, PlayerTeleportEvent.TeleportCause.PLUGIN);
+
+           EntityScheduler scheduler = targetPlayer.getScheduler();
+           scheduler.run(CircleTPPlugin.getInstance(), task -> { // This needs to run synchronously
+               targetPlayer.setRespawnLocation(null); // Reset their spawn location so they don't respawn somewhere far away
+           }, null);
         }
 
         respawnHelper.generateRespawnLocations(world, centerX, centerZ, radius);
