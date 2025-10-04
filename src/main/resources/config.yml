@@ -1,0 +1,8 @@
+defaultCenter:
+  x: -52
+  z: -117
+
+randomRespawn:
+  world: world
+  max: 25000
+  min: 5000

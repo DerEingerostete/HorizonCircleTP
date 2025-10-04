@@ -1,13 +1,20 @@
 package de.dereingerostete.circletp.helper;
 
+import de.dereingerostete.circletp.CircleTPPlugin;
 import de.dereingerostete.circletp.util.CircleUtils;
 import de.dereingerostete.circletp.util.LocationUtils;
 import de.dereingerostete.circletp.util.RadiusUtils;
 import lombok.Getter;
 import lombok.Setter;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.GameMode;
 import org.bukkit.HeightMap;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -23,18 +30,48 @@ import static de.dereingerostete.circletp.CircleTPPlugin.log;
 public class RespawnHelper {
     private @Getter @Setter boolean enabled;
     private final @NotNull List<Location> respawnLocations;
+    private final @Nullable RandomRespawnHelper randomHelper;
 
     public RespawnHelper() {
         this.enabled = false;
         this.respawnLocations = new ArrayList<>();
+
+        FileConfiguration config = CircleTPPlugin.getInstance().getConfig();
+        ConfigurationSection section = config.getConfigurationSection("randomRespawn");
+        this.randomHelper = section == null ? null : new RandomRespawnHelper(section);
+        if (section == null) log.warn("No random respawn configuration found! Using defaults");
     }
 
     @Nullable
-    public Location findRespawnLocation() {
+    public Location findCircleRespawn() {
         // Find fitting location
         if (respawnLocations.isEmpty()) return null; // We did not load any locations yet
         int index = ThreadLocalRandom.current().nextInt(respawnLocations.size());
         return respawnLocations.get(index);
+    }
+
+    public void teleportRandomRespawn(@NotNull Player player) {
+        if (randomHelper == null) return; // Missing configuration
+
+        // Get random x and z
+        Location rawLocation = randomHelper.generateRandomLocation();
+        if (rawLocation == null) return;
+
+        player.sendMessage(Component.text("Teleporting you to a random location. This may take a couple seconds.", NamedTextColor.DARK_AQUA));
+        player.setGameMode(GameMode.SPECTATOR);
+
+        int chunkX = rawLocation.getBlockX() >> 4;
+        int chunkZ = rawLocation.getBlockZ() >> 4;
+
+        World world = rawLocation.getWorld();
+        world.getChunkAtAsyncUrgently(chunkX, chunkZ).thenAccept(chunk -> {
+           int y = world.getHighestBlockYAt(rawLocation, HeightMap.WORLD_SURFACE);
+           rawLocation.setY(y + 1.5D);
+
+           Location finalLocation = rawLocation.toCenterLocation();
+           player.teleportAsync(finalLocation);
+           player.setGameMode(GameMode.SURVIVAL);
+        });
     }
 
     public void generateRespawnLocations(@NotNull World world, double centerX, double centerZ, double radius) {

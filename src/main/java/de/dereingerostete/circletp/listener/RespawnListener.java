@@ -5,6 +5,7 @@ import de.dereingerostete.circletp.helper.RespawnHelper;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -39,13 +40,22 @@ public class RespawnListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onRespawn(@NotNull PlayerRespawnEvent event) {
-        if (!helper.isEnabled()) return; // No enabled, ignore
-
         boolean userDefined = event.isBedSpawn() || event.isAnchorSpawn();
         if (userDefined) return; // User set its own spawn point. Use this instead
 
+        // No enabled -> Use random respawn
         Player player = event.getPlayer();
-        Location location = helper.findRespawnLocation();
+        if (!helper.isEnabled()) {
+            // We set a temporary location just to make sure player does not respawn near center
+            World world = player.getWorld();
+            Location temporaryLocation = new Location(world, 1000, 100_000, 1000);
+            event.setRespawnLocation(temporaryLocation);
+
+            helper.teleportRandomRespawn(player);
+            return;
+        }
+
+        Location location = helper.findCircleRespawn();
         if (location != null) {
             event.setRespawnLocation(location);
             player.sendMessage(Component.text("It appears you haven't set a respawn point since the teleport.", NamedTextColor.GRAY));
@@ -57,10 +67,11 @@ public class RespawnListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPlayerPostRespawn(@NotNull PlayerPostRespawnEvent event) {
-        if (!helper.isEnabled()) return; // No enabled, ignore
         Player player = event.getPlayer();
-        player.addPotionEffect(resistanceEffect);
-        player.addPotionEffect(fireResistanceEffect);
+        if (!player.hasPermission("event.circle-tp.ignored")) { // Skilled players do not get this
+            player.addPotionEffect(resistanceEffect);
+            player.addPotionEffect(fireResistanceEffect);
+        }
     }
 
 }
