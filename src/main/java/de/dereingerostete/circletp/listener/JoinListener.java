@@ -2,6 +2,7 @@ package de.dereingerostete.circletp.listener;
 
 import de.dereingerostete.circletp.helper.RespawnHelper;
 import lombok.RequiredArgsConstructor;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -15,8 +16,14 @@ public class JoinListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onPlayerJoin(@NotNull PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        if (!player.hasPlayedBefore()) { // Only new players
-            helper.teleportRandomRespawn(player);
+        if (player.hasPlayedBefore()) return; // Only new players
+
+        Location location = helper.isCircleTPEnabled() ?
+                helper.findCircleRespawn() :    // Random location around circle
+                helper.getRandomRespawn();      // Random respawn location
+
+        if (location != null) {
+            player.teleport(location);
         }
     }
 

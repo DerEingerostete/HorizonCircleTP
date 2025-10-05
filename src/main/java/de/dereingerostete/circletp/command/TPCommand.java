@@ -11,13 +11,15 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.HeightMap;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
@@ -31,14 +33,24 @@ import static de.dereingerostete.circletp.CircleTPPlugin.log;
 public class TPCommand extends SimpleCommand {
     private static final double MIN_RADIUS = 300; // Minimum radius we always require
     private final @NotNull RespawnHelper respawnHelper;
+    private final @Nullable Point2D.Double defaultCenter;
 
     public TPCommand(@NotNull RespawnHelper respawnHelper) {
         super("circle-tp", true);
-        this.respawnHelper = respawnHelper;
-
         setPermission("event.circle-tp");
         setDescription("Teleports all players in a circle around a certain point. It also sets the players respawn point");
         setUsage("/circle-tp <circleX> <circleZ>");
+
+        this.respawnHelper = respawnHelper;
+        FileConfiguration config = CircleTPPlugin.getInstance().getConfig();
+        ConfigurationSection section = config.getConfigurationSection("defaultCenter");
+        if (section != null) {
+            double x = section.getDouble("x", Double.MAX_VALUE);
+            double z = section.getDouble("z", Double.MAX_VALUE);
+            this.defaultCenter = x == Double.MAX_VALUE && z == Double.MAX_VALUE ? null : new Point2D.Double(x, z);
+        } else {
+            this.defaultCenter = null;
+        }
     }
 
     @Override
@@ -48,18 +60,23 @@ public class TPCommand extends SimpleCommand {
 
     @Override
     public void execute(@NotNull Player player, @NotNull String[] args, int arguments) {
-        if (args.length != 2) {
+        if (args.length != 2 && defaultCenter == null) {
             sendMessage(player, "Wrong usage. Use /circle-tp <circleX> <circleZ>", NamedTextColor.RED);
             return;
         }
 
         double centerX, centerZ;
-        try {
-            centerX = Double.parseDouble(args[0]);
-            centerZ = Double.parseDouble(args[1]);
-        } catch (NumberFormatException exception) {
-            sendMessage(player, "Failed to parse coordinates!", NamedTextColor.RED);
-            return;
+        if (args.length == 2) {
+            try {
+                centerX = Double.parseDouble(args[0]);
+                centerZ = Double.parseDouble(args[1]);
+            } catch (NumberFormatException exception) {
+                sendMessage(player, "Failed to parse coordinates!", NamedTextColor.RED);
+                return;
+            }
+        } else {
+            centerX = defaultCenter.getX();
+            centerZ = defaultCenter.getY();
         }
 
         List<Player> allPlayers = List.copyOf(Bukkit.getOnlinePlayers())
@@ -119,7 +136,9 @@ public class TPCommand extends SimpleCommand {
                 i++;
 
                 CompletableFuture<Void> future = world.getChunkAtAsync(chunkX, chunkZ).thenAccept(chunk -> {
-                    int y = world.getHighestBlockYAt(pointX, pointZ, HeightMap.MOTION_BLOCKING);
+                    int chunkPointX = LocationUtils.toChunkCoordinate(chunkX);
+                    int chunkPointZ = LocationUtils.toChunkCoordinate(chunkZ);
+                    int y = chunk.getChunkSnapshot().getHighestBlockYAt(chunkPointX, chunkPointZ);
                     Location location = new Location(world, pointX, y + 1.5, pointZ).toCenterLocation();
                     LocationUtils.setYawToCenter(location, centerX, centerZ);
                     playerLocations.put(targetPlayer, location);
@@ -153,7 +172,7 @@ public class TPCommand extends SimpleCommand {
         }
 
         respawnHelper.generateRespawnLocations(world, centerX, centerZ, radius);
-        respawnHelper.setEnabled(true);
+        respawnHelper.setCircleTPEnabled(true);
         sendMessage(player, "Respawning around the center is now active", NamedTextColor.DARK_GREEN);
     }
 

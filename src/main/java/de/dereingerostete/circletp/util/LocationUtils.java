@@ -16,4 +16,8 @@ public class LocationUtils {
         location.setYaw(yaw);
     }
 
+    public static int toChunkCoordinate(int coordinate) {
+        return coordinate & 15;
+    }
+
 }

@@ -5,7 +5,6 @@ import de.dereingerostete.circletp.helper.RespawnHelper;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -26,7 +25,7 @@ public class RespawnListener implements Listener {
         this.helper = helper;
         this.resistanceEffect = new PotionEffect(
                 PotionEffectType.RESISTANCE,
-                20 * 4,
+                20 * 5,
                 254,
                 false, false
         );
@@ -43,18 +42,16 @@ public class RespawnListener implements Listener {
         boolean userDefined = event.isBedSpawn() || event.isAnchorSpawn();
         if (userDefined) return; // User set its own spawn point. Use this instead
 
-        // No enabled -> Use random respawn
+        // Not enabled -> Use random respawn
         Player player = event.getPlayer();
-        if (!helper.isEnabled()) {
-            // We set a temporary location just to make sure player does not respawn near center
-            World world = player.getWorld();
-            Location temporaryLocation = new Location(world, 1000, 100_000, 1000);
-            event.setRespawnLocation(temporaryLocation);
-
-            helper.teleportRandomRespawn(player);
+        if (!helper.isCircleTPEnabled()) {
+            Location location = helper.getRandomRespawn();
+            if (location != null) event.setRespawnLocation(location);
+            else log.warn("No random respawn location found for player to respawn!");
             return;
         }
 
+        // Respawn around circle
         Location location = helper.findCircleRespawn();
         if (location != null) {
             event.setRespawnLocation(location);

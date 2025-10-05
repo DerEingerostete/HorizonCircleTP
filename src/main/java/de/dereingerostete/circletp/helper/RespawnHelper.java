@@ -6,15 +6,10 @@ import de.dereingerostete.circletp.util.LocationUtils;
 import de.dereingerostete.circletp.util.RadiusUtils;
 import lombok.Getter;
 import lombok.Setter;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
-import org.bukkit.GameMode;
-import org.bukkit.HeightMap;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -28,12 +23,12 @@ import java.util.stream.Collectors;
 import static de.dereingerostete.circletp.CircleTPPlugin.log;
 
 public class RespawnHelper {
-    private @Getter @Setter boolean enabled;
+    private @Getter @Setter boolean circleTPEnabled;
     private final @NotNull List<Location> respawnLocations;
     private final @Nullable RandomRespawnHelper randomHelper;
 
     public RespawnHelper() {
-        this.enabled = false;
+        this.circleTPEnabled = false;
         this.respawnLocations = new ArrayList<>();
 
         FileConfiguration config = CircleTPPlugin.getInstance().getConfig();
@@ -50,28 +45,9 @@ public class RespawnHelper {
         return respawnLocations.get(index);
     }
 
-    public void teleportRandomRespawn(@NotNull Player player) {
-        if (randomHelper == null) return; // Missing configuration
-
-        // Get random x and z
-        Location rawLocation = randomHelper.generateRandomLocation();
-        if (rawLocation == null) return;
-
-        player.sendMessage(Component.text("Teleporting you to a random location. This may take a couple seconds.", NamedTextColor.DARK_AQUA));
-        player.setGameMode(GameMode.SPECTATOR);
-
-        int chunkX = rawLocation.getBlockX() >> 4;
-        int chunkZ = rawLocation.getBlockZ() >> 4;
-
-        World world = rawLocation.getWorld();
-        world.getChunkAtAsyncUrgently(chunkX, chunkZ).thenAccept(chunk -> {
-           int y = world.getHighestBlockYAt(rawLocation, HeightMap.WORLD_SURFACE);
-           rawLocation.setY(y + 1.5D);
-
-           Location finalLocation = rawLocation.toCenterLocation();
-           player.teleportAsync(finalLocation);
-           player.setGameMode(GameMode.SURVIVAL);
-        });
+    @Nullable
+    public Location getRandomRespawn() {
+        return randomHelper == null ? null : randomHelper.getRandomLocation();
     }
 
     public void generateRespawnLocations(@NotNull World world, double centerX, double centerZ, double radius) {
@@ -99,7 +75,7 @@ public class RespawnHelper {
                     for (int z = 2; z < 6; z++) {
                         int fullX = chunkX * 16 + x;
                         int fullZ = chunkZ * 16 + z;
-                        double y = world.getHighestBlockYAt(fullX, fullZ, HeightMap.MOTION_BLOCKING) + 2.5;
+                        double y = chunk.getChunkSnapshot().getHighestBlockYAt(x, z) + 2.5;
                         Location location = new Location(world, fullX + 0.5, y, fullZ + 0.5);
                         LocationUtils.setYawToCenter(location, centerX, centerZ);
                         respawnLocations.add(location);

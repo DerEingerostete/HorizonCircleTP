@@ -5,4 +5,5 @@ version: '${project.version}'
 api-version: 1.20
 folia-supported: true
 
+load: POSTWORLD
 main: de.dereingerostete.circletp.CircleTPPlugin

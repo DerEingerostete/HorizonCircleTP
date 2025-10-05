@@ -4,5 +4,6 @@ defaultCenter:
 
 randomRespawn:
   world: world
-  max: 25000
-  min: 5000
+  max: 2500
+  min: 350
+  maxChunks: 1000
