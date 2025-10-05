@@ -32,7 +32,7 @@ public class RandomRespawnHelper {
             maxCoordinates = centerLocation.getBlockX() + size;
         }
 
-        int maxChunks = section.getInt("maxChunks", 2500);
+        int maxChunks = section.getInt("maxChunks", 1800);
         int minDistance = Math.min(section.getInt("min", 350), maxCoordinates);
         int maxDistance = Math.min(section.getInt("max", 2_000), maxCoordinates);
         if (world != null) loadRespawnLocations(world, minDistance, maxDistance, maxChunks);

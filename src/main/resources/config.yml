@@ -6,4 +6,4 @@ randomRespawn:
   world: world
   max: 2500
   min: 350
-  maxChunks: 1000
+  maxChunks: 1800
