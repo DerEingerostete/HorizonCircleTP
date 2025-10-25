@@ -1,0 +1,25 @@
+name: package.yml
+on:
+  push:
+    branches: [ 'main']
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: 'Setup JDK 21'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: 'Package with Maven'
+        run: mvn clean package
+
+      - name: 'Upload jar'
+        run: rm target/original-* && mkdir staging && cp target/*.jar staging
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Package
+          path: staging
